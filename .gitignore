@@ -1,0 +1,16 @@
+# Fichiers sensibles et clés privées à ne JAMAIS pousser sur GitHub
+*.key
+*.pem
+*.crt
+*.pfx
+secrets/
+passwords.txt
+.env
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+*.swp
+__pycache__/
+.DS_Store
+Thumbs.db
