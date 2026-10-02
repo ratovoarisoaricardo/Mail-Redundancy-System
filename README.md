@@ -3,6 +3,10 @@
 > **Projet de fin d'études – Diplôme de Master en Informatique**  
 > **Auteur :** RATOVOARISOA Mendrika Manjaka Ricardo  
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform: Debian](https://img.shields.io/badge/Platform-Debian%20Linux-A81D33.svg?logo=debian&logoColor=white)](https://www.debian.org/)
+[![Protocol: VRRP](https://img.shields.io/badge/Protocol-VRRPv3%20(RFC%205798)-blue.svg)](https://datatracker.ietf.org/doc/html/rfc5798)
+
 ---
 
 ## 📑 Sommaire
@@ -16,6 +20,7 @@
 8. [Procédure de Déploiement Sommaire](#-procédure-de-déploiement-sommaire)
 9. [Arborescence du Dépôt](#-arborescence-du-dépôt)
 10. [📚 Références Officielles & Standards IETF / RFC](#-références-officielles--standards-ietf--rfc)
+11. [📄 Licence & Propriété Intellectuelle](#-licence--propriété-intellectuelle)
 
 ---
 
@@ -145,6 +150,7 @@ Pour une analyse exhaustive des configurations et des protocoles, consultez les 
 
 ```text
 Mail-Redundancy-System/
+├── LICENSE                            # Licence officielle MIT (Copyright auteur)
 ├── README.md                          # Documentation globale et architecture
 ├── .gitignore                         # Règles d'exclusion des secrets et fichiers temporaires
 │
@@ -183,3 +189,16 @@ Mail-Redundancy-System/
 * **MariaDB :** Base de connaissances officielle sur la [Réplication Standard](https://mariadb.com/kb/en/standard-replication/) et les [Clusters Galera](https://mariadb.com/kb/en/galera-cluster/) sur [mariadb.com](https://mariadb.com/).
 * **Debian :** Manuel de référence pour la haute disponibilité et réseau sur [wiki.debian.org](https://wiki.debian.org/).
 * **ISPConfig :** Documentation officielle pour l'administration multi-serveurs sur [ispconfig.org](https://www.ispconfig.org/documentation/).
+
+---
+
+## 📄 Licence & Propriété Intellectuelle
+
+Ce projet ainsi que l'ensemble de ses documentations et scripts sont distribués sous licence **[MIT](LICENSE)**.
+
+```text
+Copyright (c) RATOVOARISOA Mendrika Manjaka Ricardo
+
+La permission est accordée à toute personne d'utiliser, copier, modifier, fusionner, publier ou distribuer ce travail,
+sous réserve de conserver la mention de droit d'auteur originale ci-dessus dans toutes les copies.
+```
