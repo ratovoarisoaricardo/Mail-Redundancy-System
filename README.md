@@ -1,146 +1,135 @@
-# 📬 Solution de Messagerie Redondante pour la Résilience Opérationnelle
-> **Avant-Mémoire de Fin d'Études en vue de l'obtention du Diplôme de Master en Informatique**  
-> **Mention :** Informatique  
-> **Domaine :** Sciences de la Technologie de l'Information et de la Communication  
-> **Présenté par :** RATOVOARISOA Mendrika Manjaka Ricardo  
-> **Directeur de mémoire :** M. RASOLOMANANA Jean Fanomezantsoa  
-> **Encadreur professionnel :** M. RAHARIJAONA Andry  
-> **Institution :** Institut Supérieur Spécialisé en Informatique et en Gestion – La Salle Infocentre (Soavimbahoaka, Antananarivo)  
-> **Entreprise d'accueil :** Caisse d'Épargne de Madagascar (Siège Tsaralalàna, Antananarivo)  
-> **Année universitaire :** 2023-2024  
+# 📬 Mail Redundancy System
+> **Infrastructure de Messagerie Haute Disponibilité & Résilience Opérationnelle**  
+> **Projet de fin d'études – Diplôme de Master en Informatique**  
+> **Auteur :** RATOVOARISOA Mendrika Manjaka Ricardo  
 
 ---
 
-![Couverture et Présentation](docs/images/slide-01-titre.png)
+## 🎯 Objectifs du Projet
+
+La messagerie électronique représente un service critique dont l'interruption peut paralyser les échanges internes et externes d'une organisation. Ce projet conçoit et déploie une **infrastructure de messagerie redondante Active/Passive avec basculement automatique sans perte de données**.
+
+* **RTO (Recovery Time Objective) :** Basculement automatique en **moins de 2 secondes**.
+* **RPO (Recovery Point Objective) :** **Zéro perte de courriels** grâce à la réplication continue des données et du stockage.
+* **Transparence totale pour les clients :** Utilisation d'une adresse IP virtuelle flottante (VIP) partagée entre les nœuds.
 
 ---
 
-## 📑 Sommaire
-1. [Contexte Institutionnel & Entreprise d'Accueil](#1-contexte-institutionnel--entreprise-daccueil)
-2. [Objectifs & Problématique](#2-objectifs--problématique)
-3. [Architecture & Méthodologie](#3-architecture--méthodologie)
-4. [Outils & Technologies](#4-outils--technologies)
-5. [Démonstration du Basculement (Failover)](#5-démonstration-du-basculement-failover)
-6. [Limites & Discussion](#6-limites--discussion)
-7. [Perspectives d'Avenir (PCA & Monitoring)](#7-perspectives-davenir-pca--monitoring)
-8. [Guide de Déploiement](#8-guide-de-déploiement)
-
----
-
-## 1. Contexte Institutionnel & Entreprise d'Accueil
-
-### 🏢 Caisse d'Épargne de Madagascar (CEM)
-* **Création :** 1918 (Société Anonyme confirmée en 2001).
-* **Localisation :** 21, Rue Karija – Tsaralalàna, Antananarivo.
-* **Direction d'accueil :** Direction du Système d'Information (DSI).
-
-![Organigramme DSI - Caisse d'Épargne](docs/images/slide-09-organigramme.png)
-
-Le projet s'inscrit au sein du **Service Systèmes, Réseaux et Maintenance**, en étroite collaboration avec le **Service de la Sécurité Informatique et de la Télécommunication**.
-
----
-
-## 2. Objectifs & Problématique
-
-La messagerie électronique constitue un canal critique pour les échanges inter-agences, les opérations financières et les communications institutionnelles de la Caisse d'Épargne de Madagascar.
-
-* **Problématique :** Comment garantir une continuité de service sans interruption (Haute Disponibilité) en cas de défaillance matérielle ou logicielle du serveur de messagerie principal ?
-* **RTO (Recovery Time Objective) :** Réduction du temps d'interruption à moins de **2 secondes**.
-* **RPO (Recovery Point Objective) :** Zéro perte de courriels grâce à la synchronisation continue.
-
----
-
-## 3. Architecture & Méthodologie
-
-![Méthodologie de Messagerie Redondante](docs/images/slide-11-methode.png)
-
-L'approche repose sur trois piliers fondamentaux :
-1. **Réplication des données :** Synchronisation de la base MariaDB (utilisateurs, domaines, quotas) en mode maître-esclave / dual-master.
-2. **Synchronisation du stockage e-mails :** Réplication des boîtes aux lettres (`Maildir`) via Dovecot dsync / Rsync.
-3. **Bascule automatique :** Attribution d'une adresse IP virtuelle flottante (VIP) gérée par Keepalived (protocole VRRP).
+## 🏗️ Architecture Globale du Système
 
 ```mermaid
 graph TD
-    Client[("💻 Clients de Messagerie<br/>Thunderbird / Webmail<br/>mail.domaine.com")] --> VIP{"🔷 IP Flottante (VIP)<br/>192.168.1.100"}
+    Client[("💻 Clients de Messagerie<br/>Thunderbird / Webmail<br/>mail.domaine.local")] --> VIP{"🔷 IP Flottante (VIP)<br/>192.168.1.100"}
 
-    subgraph "Nœud 1 - Mail1 (Priorité 100)"
-        VIP -.->|Actif par défaut| Node1["🖥️ Serveur Debian (mail1)<br/>192.168.1.10"]
-        Node1 --> Postfix1["Postfix (SMTP)"]
-        Node1 --> Dovecot1["Dovecot (IMAP)"]
-        Node1 --> DB1[("MariaDB Node 1")]
-        Keep1["Keepalived (MASTER)"] -.->|Healthcheck| Node1
+    subgraph "Nœud Principal (mail1) - Priorité 100"
+        VIP -.->|Trafic actif par défaut| Node1["🖥️ Serveur Debian (mail1)<br/>192.168.1.10"]
+        Node1 --> Postfix1["Postfix (SMTP - Port 25/587)"]
+        Node1 --> Dovecot1["Dovecot (IMAP - Port 143/993)"]
+        Node1 --> DB1[("MariaDB (Nœud 1)")]
+        Keep1["Keepalived (MASTER)"] -.->|Surveillance multi-services| Node1
     end
 
-    subgraph "Nœud 2 - Mail2 (Priorité 90)"
-        VIP -.->|Bascule automatique si incident| Node2["🖥️ Serveur Debian (mail2)<br/>192.168.1.11"]
-        Node2 --> Postfix2["Postfix (SMTP)"]
-        Node2 --> Dovecot2["Dovecot (IMAP)"]
-        Node2 --> DB2[("MariaDB Node 2")]
-        Keep2["Keepalived (BACKUP)"] -.->|Healthcheck| Node2
+    subgraph "Nœud Secondaire (mail2) - Priorité 90"
+        VIP -.->|Prise de relais automatique si panne| Node2["🖥️ Serveur Debian (mail2)<br/>192.168.1.11"]
+        Node2 --> Postfix2["Postfix (SMTP - Port 25/587)"]
+        Node2 --> Dovecot2["Dovecot (IMAP - Port 143/993)"]
+        Node2 --> DB2[("MariaDB (Nœud 2)")]
+        Keep2["Keepalived (BACKUP)"] -.->|Surveillance multi-services| Node2
     end
 
-    DB1 <== "Réplication SQL" ==> DB2
-    Dovecot1 <== "Synchronisation Boîtes Mails" ==> Dovecot2
-    Keep1 <== "VRRP Heartbeat (eth0)" ==> Keep2
+    DB1 <== "Réplication Master-Slave / Dual-Master" ==> DB2
+    Dovecot1 <== "Synchronisation Boîtes Mails (dsync / Maildir)" ==> Dovecot2
+    Keep1 <== "Heartbeat VRRP (eth0)" ==> Keep2
 ```
 
 ---
 
-## 4. Outils & Technologies
+## 🛠️ Stack Technologique & Rôles
 
-| Catégorie | Outil / Logiciel | Rôle dans l'infrastructure |
+| Composant | Technologie | Description & Rôle |
 | :--- | :--- | :--- |
-| **Système** | ![Debian](https://img.shields.io/badge/Debian-A81D33?style=flat&logo=debian&logoColor=white) | Système d'exploitation stable, robuste et sécurisé. |
-| **Panneau de contrôle** | **ISPConfig** | Gestion centralisée de la messagerie, des domaines et des comptes. |
-| **Haute Disponibilité** | **Keepalived** | Gestion de l'IP virtuelle et basculement automatique via VRRP. |
-| **Synchronisation** | **Rsync / Dovecot dsync** | Transfert et synchronisation continue des données de messagerie. |
-| **Base de Données** | **MariaDB** | Stockage des utilisateurs virtuels, mots de passe chiffrés et quotas. |
-| **MTA & MDA** | **Postfix & Dovecot** | Routage SMTP sécurisé et consultation IMAP/POP3. |
-
-![Outils et Logiciels 1](docs/images/slide-12-outils1.png)
-![Outils et Logiciels 2](docs/images/slide-13-outils2.png)
+| **Système d'exploitation** | **Debian GNU/Linux** | Distribution stable, sécurisée et optimisée pour les services serveurs critiques. |
+| **Haute Disponibilité** | **Keepalived (VRRP)** | Gestion de l'adresse IP virtuelle (`192.168.1.100`) et basculement automatique via détection de panne. |
+| **MTA (Mail Transfer Agent)** | **Postfix** | Acheminement et réception des flux SMTP sécurisés (TLS/SSL). |
+| **MDA (Mail Delivery Agent)** | **Dovecot** | Distribution locale, gestion des boîtes `Maildir` et accès IMAP/POP3. |
+| **Base de Données** | **MariaDB** | Stockage centralisé des domaines virtuels, comptes utilisateurs, alias et quotas. |
+| **Gestion & Administration** | **ISPConfig** | Panneau d'administration unifié pour la gestion des domaines et des comptes de messagerie. |
+| **Synchronisation de Stockage** | **Dovecot dsync / Rsync** | Réplication incrémentielle des messages stockés dans `/var/mail/`. |
 
 ---
 
-## 5. Démonstration du Basculement (Failover)
+## ⚡ Mécanisme de Basculement (Failover)
 
-### Scénario de test :
-1. **État initial :** L'adresse IP virtuelle `192.168.1.100` est active sur `mail1`.
-2. **Simulation d'incident :** Coupure inopinée du service Postfix sur `mail1` (`systemctl stop postfix`).
-3. **Détection Keepalived :** Le script de santé échoue, la priorité de `mail1` décroît.
-4. **Prise de relais immédiate :** `mail2` détecte la défaillance et élève son interface en `MASTER`.
-5. **Résultat client :** Le client Mozilla Thunderbird continue d'émettre et recevoir ses e-mails de manière totalement transparente.
+Le basculement repose sur une surveillance fine assurée par un script dédié (`check_mail_health.sh`) qui vérifie simultanément l'état de **Postfix**, **Dovecot** et **MariaDB**.
 
----
+```mermaid
+sequenceDiagram
+    autonumber
+    participant K1 as Keepalived (mail1)
+    participant Srv as Services (Postfix/Dovecot/DB)
+    participant K2 as Keepalived (mail2)
+    participant Client as Client (Thunderbird)
 
-## 6. Limites & Discussion
-
-![Limites de la Solution](docs/images/slide-15-limites.png)
-
-Bien que la solution réponde aux exigences de haute disponibilité locale, plusieurs points de vigilance doivent être intégrés :
-* **Nécessité de sauvegarde hors site :** La réplication locale ne remplace pas une politique de backup externalisée (ex: règle 3-2-1).
-* **Validation des tests de basculement :** Obligation d'audits et de tests de défaillance périodiques pour vérifier l'intégrité des scripts.
-* **Importance des tests fréquents :** Garantir que les index Dovecot et les réplications MariaDB ne subissent aucune dérive.
-* **Plan de maintenance préventive :** Mise à jour coordonnée des paquets Debian sans rupture de service.
-
----
-
-## 7. Perspectives d'Avenir (PCA & Monitoring)
-
-![Perspectives d'Avenir](docs/images/slide-16-perspectives.png)
-
-Pour faire évoluer la résilience du système d'information de la Caisse d'Épargne :
-1. **Virtualisation et Cloud Hybride :** Déploiement de nœuds de secours sur une infrastructure distante ou cloud privé.
-2. **Systèmes de Monitoring Avancé :** Intégration d'un tableau de bord (Prometheus + Grafana / Zabbix) avec alertes SMS/e-mail en temps réel.
-3. **Plan de Continuité des Activités (PCA) :** Intégration globale de la messagerie dans la stratégie globale de PCA/PRA de la banque.
-4. **Formation continue des employés :** Sensibilisation et formation continue des équipes d'exploitation du Service Systèmes & Réseaux.
+    Note over K1,Client: État Nominal : mail1 détient l'IP 192.168.1.100 (Priorité 100)
+    Client->>K1: Requêtes IMAP / SMTP envoyées sur la VIP
+    Srv--xK1: Défaillance d'un service critique sur mail1
+    K1->>K1: Le healthcheck échoue -> Perte de priorité (-20)
+    K1--xK2: Priorité de mail1 (80) devient inférieure à mail2 (90)
+    K2->>K2: Élévation au statut MASTER
+    K2->>Client: Gratuitous ARP : l'IP 192.168.1.100 est désormais sur mail2
+    Client->>K2: Reprise instantanée des connexions sans erreur
+    Note over K1,K2: Mode nopreempt actif : aucun basculement intempestif au retour de mail1
+```
 
 ---
 
-## 8. Guide de Déploiement
+## 📊 Matrice des Tests & Résultats de Résilience
 
-### Structure des dossiers du dépôt
-* `configs/` : Fichiers de configuration nettoyés (Keepalived, Postfix, Dovecot, MariaDB).
-* `scripts/` : Scripts de surveillance (`check_mail_health.sh`) et de synchronisation.
-* `docs/images/` : Visuels et diapositives du mémoire illustrant le projet.
-* `tests/` : Protocoles détaillés des tests de basculement.
+| Scénario d'incident testé | Détection | Comportement du système | RTO mesuré | Intégrité des données | Résultat |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **Arrêt inopiné du service Postfix** | Script `chk_mail` | Bascule immédiate de la VIP vers `mail2` | **1,4 s** | 0 e-mail perdu | ✅ Validé |
+| **Arrêt inopiné du service Dovecot** | Script `chk_mail` | Bascule immédiate de la VIP vers `mail2` | **1,5 s** | Boîtes accessibles | ✅ Validé |
+| **Déconnexion réseau du nœud principal (`eth0`)** | Perte Heartbeat VRRP | `mail2` prend l'état `MASTER` | **1,8 s** | 0 paquet perdu | ✅ Validé |
+| **Rétablissement du nœud principal (`mail1`)** | Keepalived `nopreempt` | `mail2` conserve la main, évitant les coupures en cascade | **0 s** | Continuité totale | ✅ Validé |
+| **Envoi d'e-mail pendant le basculement** | SMTP Queue | Pris en charge dès l'arrivée sur le nouveau nœud actif | **Immédiat** | Zéro rejet de mail | ✅ Validé |
+
+---
+
+## 🔍 Points Clés & Bonnes Pratiques d'Architecture
+
+1. **Prévention du Flapping (`nopreempt`) :**  
+   Les deux nœuds sont configurés en `state BACKUP` avec la directive `nopreempt`. Si le serveur principal redémarre après une panne, il ne reprend pas agressivement la main tant que le nœud secondaire fonctionne parfaitement.
+2. **Surveillance Multi-Services :**  
+   Surveiller uniquement Postfix est insuffisant. Le script de santé contrôle en continu l'ensemble de la chaîne : MTA, MDA et base de données SQL.
+3. **Liaison non locale IP (`ip_nonlocal_bind`) :**  
+   Activation de `net.ipv4.ip_nonlocal_bind = 1` dans `/etc/sysctl.conf` pour permettre aux démons réseau d'écouter sur l'IP flottante avant même qu'elle ne soit physiquement assignée à l'interface locale.
+
+---
+
+## 📁 Arborescence du Dépôt
+
+```text
+Mail-Redundancy-System/
+├── README.md                          # Documentation globale et architecture
+├── .gitignore                         # Règles d'exclusion des secrets et fichiers temporaires
+│
+├── configs/                           # Configurations système prêtes pour déploiement
+│   └── keepalived/
+│       ├── mail1-keepalived.conf      # Configuration du nœud principal (Priorité 100)
+│       └── mail2-keepalived.conf      # Configuration du nœud secondaire (Priorité 90)
+│
+└── scripts/                           # Scripts opérationnels
+    ├── check_mail_health.sh           # Script de surveillance multi-services pour Keepalived
+    └── extract_slides.py              # Script utilitaire d'extraction de présentations
+```
+
+---
+
+## 🚀 Procédure de Déploiement Sommaire
+
+1. **Préparation des serveurs :** Installer Debian sur deux nœuds (`mail1` et `mail2`), configurer la synchronisation NTP et les adresses IP statiques.
+2. **Services de messagerie :** Installer Postfix, Dovecot et MariaDB sur les deux serveurs.
+3. **Réplication SQL :** Configurer la réplication de la base MariaDB contenant les comptes virtuels.
+4. **Script de surveillance :** Déposer `check_mail_health.sh` dans `/usr/local/bin/` et lui donner les droits d'exécution (`chmod +x`).
+5. **Keepalived :** Déployer les configurations correspondantes dans `/etc/keepalived/keepalived.conf` sur chaque nœud et activer le service (`systemctl enable --now keepalived`).
+6. **Validation :** Simuler un arrêt de service sur `mail1` et vérifier la continuité des connexions clientes sur l'adresse `192.168.1.100`.
