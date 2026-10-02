@@ -1,7 +1,10 @@
 #!/bin/bash
 # ==============================================================================
 # Script de surveillance (Healthcheck) pour Keepalived
-# Projet : Système de Messagerie Haute Disponibilité (Postfix, Dovecot, MariaDB)
+# Projet   : Mail Redundancy System (Haute Disponibilité)
+# Auteur   : RATOVOARISOA Mendrika Manjaka Ricardo
+# Licence  : MIT License
+# Copyright (c) RATOVOARISOA Mendrika Manjaka Ricardo - Tous droits réservés
 # ==============================================================================
 
 # 1. Vérification du service Postfix (MTA - SMTP)
